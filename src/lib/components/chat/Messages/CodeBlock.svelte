@@ -25,6 +25,7 @@
 	export let token;
 	export let lang = '';
 	export let code = '';
+	export let attributes = {};
 
 	export let className = 'my-2';
 	export let editorClassName = '';
@@ -156,7 +157,9 @@
 					code.includes('sklearn') ? 'scikit-learn' : null,
 					code.includes('scipy') ? 'scipy' : null,
 					code.includes('re') ? 'regex' : null,
-					code.includes('seaborn') ? 'seaborn' : null
+					code.includes('seaborn') ? 'seaborn' : null,
+					code.includes('sympy') ? 'sympy' : null,
+					code.includes('tiktoken') ? 'tiktoken' : null
 				].filter(Boolean);
 
 				console.log(packages);
@@ -206,7 +209,9 @@ __builtins__.input = input`);
 			code.includes('sklearn') ? 'scikit-learn' : null,
 			code.includes('scipy') ? 'scipy' : null,
 			code.includes('re') ? 'regex' : null,
-			code.includes('seaborn') ? 'seaborn' : null
+			code.includes('seaborn') ? 'seaborn' : null,
+			code.includes('sympy') ? 'sympy' : null,
+			code.includes('tiktoken') ? 'tiktoken' : null
 		].filter(Boolean);
 
 		console.log(packages);
@@ -278,6 +283,36 @@ __builtins__.input = input`);
 	}
 
 	$: dispatch('code', { lang, code });
+
+	$: if (attributes) {
+		onAttributesUpdate();
+	}
+
+	const onAttributesUpdate = () => {
+		if (attributes?.output) {
+			// Create a helper function to unescape HTML entities
+			const unescapeHtml = (html) => {
+				const textArea = document.createElement('textarea');
+				textArea.innerHTML = html;
+				return textArea.value;
+			};
+
+			try {
+				// Unescape the HTML-encoded string
+				const unescapedOutput = unescapeHtml(attributes.output);
+
+				// Parse the unescaped string into JSON
+				const output = JSON.parse(unescapedOutput);
+
+				// Assign the parsed values to variables
+				stdout = output.stdout;
+				stderr = output.stderr;
+				result = output.result;
+			} catch (error) {
+				console.error('Error:', error);
+			}
+		}
+	};
 
 	onMount(async () => {
 		console.log('codeblock', lang, code);
@@ -376,18 +411,32 @@ __builtins__.input = input`);
 
 			<div
 				id="plt-canvas-{id}"
-				class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
+				class="bg-gray-50 dark:bg-[#202123] dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
 			/>
 
-			{#if executing}
-				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-					<div class="text-sm">Running...</div>
-				</div>
-			{:else if stdout || stderr || result}
-				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-					<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-					<div class="text-sm">{stdout || stderr || result}</div>
+			{#if executing || stdout || stderr || result}
+				<div
+					class="bg-gray-50 dark:bg-[#202123] dark:text-white !rounded-b-lg py-4 px-4 flex flex-col gap-2"
+				>
+					{#if executing}
+						<div class=" ">
+							<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+							<div class="text-sm">Running...</div>
+						</div>
+					{:else}
+						{#if stdout || stderr}
+							<div class=" ">
+								<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+								<div class="text-sm">{stdout || stderr}</div>
+							</div>
+						{/if}
+						{#if result}
+							<div class=" ">
+								<div class=" text-gray-500 text-xs mb-1">RESULT</div>
+								<div class="text-sm">{`${JSON.stringify(result)}`}</div>
+							</div>
+						{/if}
+					{/if}
 				</div>
 			{/if}
 		{/if}
